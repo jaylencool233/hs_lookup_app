@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HS编码查询结果</title>
+  <style>
+    body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: #f4f7fb; color: #132238; }
+    .wrap { max-width: 980px; margin: 32px auto; padding: 24px; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(19,34,56,.08); margin-bottom: 18px; }
+    h1, h2 { margin-top: 0; }
+    .meta { color: #526176; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .item { background: #f8fbff; border-radius: 12px; padding: 16px; }
+    ul { padding-left: 20px; }
+    a { color: #0d67d0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>HS编码查询结果</h1>
+      <div class="meta">编码：{{ result.display_code }}</div>
+      <p><strong>中文品名：</strong>{{ result.name_zh }}</p>
+      <p><strong>俄文原文：</strong>{{ result.name_ru }}</p>
+    </div>
+
+    <div class="card">
+      <h2>分类路径</h2>
+      <ul>
+        {% for item in result.category_path_zh %}
+        <li>{{ item.code }} - {{ item.name }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>税率信息</h2>
+      <div class="grid">
+        <div class="item">
+          <strong>进口关税</strong>
+          <div>{{ result.taxes.import_.duty or '未显示' }}</div>
+        </div>
+        <div class="item">
+          <strong>进口增值税</strong>
+          <div>{{ result.taxes.import_.vat or '未显示' }}</div>
+        </div>
+        <div class="item">
+          <strong>进口消费税</strong>
+          <div>{{ result.taxes.import_.excise or '未显示' }}</div>
+        </div>
+        <div class="item">
+          <strong>出口关税</strong>
+          <div>{{ result.taxes.export.duty or '未显示' }}</div>
+        </div>
+        <div class="item">
+          <strong>出口消费税</strong>
+          <div>{{ result.taxes.export.excise or '未显示' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>补充信息</h2>
+      {% if result.okpd_zh %}
+      <p><strong>OKPD：</strong>{{ result.okpd_zh.code }} - {{ result.okpd_zh.name }}</p>
+      <p><strong>OKPD原文：</strong>{{ result.okpd_ru.code }} - {{ result.okpd_ru.name }}</p>
+      {% endif %}
+      <p><strong>数据来源：</strong><a href="{{ result.source_url }}" target="_blank" rel="noreferrer">{{ result.source_url }}</a></p>
+      <p><strong>抓取时间：</strong>{{ result.fetched_at }}</p>
+      <p class="meta">本结果基于公开页面整理与翻译，仅供业务参考。</p>
+    </div>
+  </div>
+</body>
+</html>

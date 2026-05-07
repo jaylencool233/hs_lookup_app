@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HS税率查询</title>
+  <style>
+    body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: #f4f7fb; color: #132238; }
+    .wrap { max-width: 860px; margin: 48px auto; padding: 24px; }
+    .card { background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 10px 30px rgba(19,34,56,.08); }
+    h1 { margin-top: 0; font-size: 32px; }
+    p { line-height: 1.6; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    input { flex: 1; min-width: 260px; padding: 14px 16px; border: 1px solid #c9d5e6; border-radius: 12px; font-size: 16px; }
+    button { padding: 14px 24px; border: 0; border-radius: 12px; background: #0d67d0; color: #fff; font-size: 16px; cursor: pointer; }
+    .error { margin-top: 16px; color: #b42318; background: #fef3f2; border-radius: 12px; padding: 12px 14px; }
+    .hint { color: #526176; font-size: 14px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>HS税率查询</h1>
+      <p>输入 10 位 HS 编码，返回 Alta 公开详情页整理后的中文税率结果。</p>
+      <form method="post" action="/lookup">
+        <div class="row">
+          <input type="text" name="code" value="{{ code }}" placeholder="请输入10位HS编码">
+          <button type="submit">查询税率</button>
+        </div>
+      </form>
+      <div class="hint">示例：6005389000 或 6005 38 900 0</div>
+      {% if error %}
+      <div class="error">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
