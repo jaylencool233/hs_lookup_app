@@ -39,6 +39,40 @@ class AltaClient:
                 return SearchMatch(code=compact_code, display_code=display_code, name=name)
         return None
 
+    def search_product_name(self, keyword_ru: str) -> list[SearchMatch]:
+        query = (keyword_ru or "").strip()
+        if not query:
+            return []
+
+        try:
+            response = self.session.get(
+                self.SEARCH_URL,
+                params={"tnstr": query},
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except requests.RequestException as exc:
+            raise UpstreamError("Alta 搜索接口不可访问") from exc
+        except ValueError as exc:
+            raise UpstreamError("Alta 搜索接口返回了无效 JSON") from exc
+
+        results: list[SearchMatch] = []
+        for item in payload:
+            display_code = item.get("tnved", "")
+            compact_code = display_code.replace(" ", "")
+            name = item.get("desc") or item.get("name") or ""
+            if not compact_code or not name:
+                continue
+            results.append(
+                SearchMatch(
+                    code=compact_code,
+                    display_code=display_code,
+                    name=name,
+                )
+            )
+        return results
+
     def fetch_detail_html(self, compact_code: str) -> str:
         try:
             response = self.session.get(self.build_detail_url(compact_code), timeout=self.timeout)
@@ -52,4 +86,3 @@ class AltaClient:
 
         response.encoding = "utf-8"
         return response.text
-

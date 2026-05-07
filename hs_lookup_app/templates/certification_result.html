@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>产品认证要求查询结果</title>
+  <style>
+    :root {
+      --bg: #f2f4f8;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #14243a;
+      --text-soft: #516079;
+      --line: #dce4ef;
+      --brand: #0f68c9;
+      --brand-soft: #e9f3ff;
+      --shadow: 0 12px 26px rgba(20, 36, 58, .08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Microsoft YaHei", "PingFang SC", sans-serif; line-height: 1.6; }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1180px; margin: 28px auto; padding: 0 20px 30px; }
+    .card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 16px; }
+    .title { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+    .sub { margin: 0; color: var(--text-soft); }
+    .meta-line { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; color: var(--text-soft); font-size: 14px; }
+    .meta-pill { background: var(--brand-soft); color: var(--brand); border-radius: 999px; padding: 4px 12px; }
+    .grid-2 { display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .hero-stack { display: grid; gap: 10px; }
+    .hero-box { border: 1px solid var(--line); border-radius: 12px; min-height: 520px; max-height: 640px; background: linear-gradient(180deg, #f9fbfe 0%, #edf3f9 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 16px; }
+    .hero-box img { width: 100%; height: 100%; object-fit: contain; display: block; cursor: zoom-in; }
+    .hero-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .hero-note { color: var(--text-soft); font-size: 13px; }
+    .ghost-btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 9px 14px; font-size: 14px; cursor: pointer; }
+    .ghost-btn:hover { background: var(--surface-soft); }
+    .core-item { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); margin-bottom: 10px; }
+    .core-item h3 { margin: 0 0 8px; font-size: 15px; }
+    .core-item p { margin: 0; }
+    .section-title { margin: 0 0 14px; font-size: 24px; }
+    .paragraphs { display: grid; gap: 10px; }
+    .paragraphs p { margin: 0; }
+    .stage-table { width: 100%; border-collapse: collapse; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .stage-table th, .stage-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .stage-table tr:last-child th, .stage-table tr:last-child td { border-bottom: 0; }
+    .stage-table th { width: 70%; background: var(--surface-soft); font-weight: 600; }
+    .faq-list { display: grid; gap: 10px; }
+    details { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); padding: 10px 12px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    .doc-card { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+    .doc-thumb { background: var(--surface-soft); height: 190px; display: flex; align-items: center; justify-content: center; padding: 12px; }
+    .doc-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .doc-body { padding: 10px 12px; font-size: 14px; }
+    .group-title { margin: 20px 0 10px; font-size: 18px; }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .tag { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; color: var(--text-soft); }
+    .image-preview-modal { position: fixed; inset: 0; background: rgba(20, 36, 58, .76); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 1000; }
+    .image-preview-modal.open { display: flex; }
+    .image-preview-dialog { width: min(92vw, 920px); max-height: 92vh; background: #fbfdff; border-radius: 16px; box-shadow: 0 20px 48px rgba(20, 36, 58, .22); overflow: hidden; display: grid; grid-template-rows: auto 1fr; }
+    .image-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+    .image-preview-title { margin: 0; font-size: 16px; }
+    .icon-btn { appearance: none; border: 0; background: transparent; color: var(--text); font-size: 24px; line-height: 1; cursor: pointer; }
+    .image-preview-body { padding: 16px; overflow: auto; background: #f4f7fb; }
+    .image-preview-body img { width: 100%; height: auto; display: block; border-radius: 10px; background: #fff; }
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .title { font-size: 26px; }
+      .hero-box { min-height: 420px; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="meta-pill">产品认证要求查询</div>
+      <h1 class="title">{{ result.page_title_zh or result.matched_keyword_zh }}</h1>
+      <p class="sub">{{ result.page_title_ru }}</p>
+      <div class="meta-line">
+        <span><strong>中文关键词：</strong>{{ result.matched_keyword_zh }}</span>
+        <span><strong>俄文关键词：</strong>{{ result.matched_keyword_ru }}</span>
+        <span><strong>抓取时间：</strong>{{ result.fetched_at }}</span>
+        <span><strong>来源链接：</strong><a href="{{ result.source_url }}" target="_blank" rel="noreferrer">查看原网页</a></span>
+      </div>
+      {% if result.category_path_zh %}
+      <div class="tag-row">
+        {% for item in result.category_path_zh %}
+        <span class="tag">{{ item }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">核心说明</h2>
+      <div class="grid-2">
+        <div class="hero-stack">
+          <div class="hero-box">
+            {% if result.hero_image_url %}
+            <img
+              src="{{ result.hero_image_url }}"
+              alt="认证示意图"
+              data-preview-trigger
+              data-preview-src="{{ result.hero_image_url }}"
+            >
+            {% else %}
+            <span class="sub">暂无图片</span>
+            {% endif %}
+          </div>
+          <div class="hero-actions">
+            <span class="hero-note">长图已按完整比例展示，点击可查看完整大图。</span>
+            {% if result.hero_image_url %}
+            <button type="button" class="ghost-btn" data-preview-trigger data-preview-src="{{ result.hero_image_url }}">查看完整图片</button>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="core-item">
+            <h3>摘要</h3>
+            <p>{{ result.summary_zh }}</p>
+            <p class="sub">{{ result.summary_ru }}</p>
+          </div>
+          <div class="core-item">
+            <h3>适用法规</h3>
+            <p>{{ result.regulation_codes | join('、') if result.regulation_codes else '未提取到明确法规号' }}</p>
+          </div>
+          <div class="core-item">
+            <h3>建议办理文件</h3>
+            <p>{{ result.certificate_names_zh | join('、') if result.certificate_names_zh else '未提取到办理文件名称' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">详细说明</h2>
+      <div class="paragraphs">
+        {% for paragraph in result.intro_paragraphs_zh %}
+        <p>{{ paragraph }}</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">执行阶段</h2>
+      <table class="stage-table">
+        <tbody>
+          {% for row in result.stage_rows_zh %}
+          <tr>
+            <th>{{ row[0] }}</th>
+            <td>{{ row[1] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">更多信息</h2>
+      <div class="faq-list">
+        {% for item in result.faq_items_zh %}
+        <details>
+          <summary>{{ item[0] }}</summary>
+          <p>{{ item[1] }}</p>
+        </details>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">其他相关文件</h2>
+      {% for group in result.document_groups_zh %}
+      <h3 class="group-title">{{ group.title }}</h3>
+      <div class="cards">
+        {% for item in group.items %}
+        <a class="doc-card" href="{{ item.url }}" target="_blank" rel="noreferrer">
+          <div class="doc-thumb">
+            {% if item.image_url %}
+            <img src="{{ item.image_url }}" alt="{{ item.title }}">
+            {% else %}
+            <span class="sub">暂无图片</span>
+            {% endif %}
+          </div>
+          <div class="doc-body">{{ item.title }}</div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">相关产品</h2>
+      <div class="cards">
+        {% for item in result.similar_products_zh %}
+        <a class="doc-card" href="{{ item[1] }}" target="_blank" rel="noreferrer">
+          <div class="doc-thumb">
+            {% if item[2] %}
+            <img src="{{ item[2] }}" alt="{{ item[0] }}">
+            {% else %}
+            <span class="sub">相关分类</span>
+            {% endif %}
+          </div>
+          <div class="doc-body">{{ item[0] }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="image-preview-modal" id="image-preview-modal" aria-hidden="true">
+    <div class="image-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="image-preview-title">
+      <div class="image-preview-head">
+        <h3 class="image-preview-title" id="image-preview-title">完整图片预览</h3>
+        <button type="button" class="icon-btn" id="image-preview-close" aria-label="关闭">×</button>
+      </div>
+      <div class="image-preview-body">
+        <img src="" alt="完整图片预览" id="image-preview-image">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const modal = document.getElementById("image-preview-modal");
+      const modalImage = document.getElementById("image-preview-image");
+      const closeBtn = document.getElementById("image-preview-close");
+      const triggers = document.querySelectorAll("[data-preview-trigger]");
+
+      if (!modal || !modalImage || !closeBtn || !triggers.length) {
+        return;
+      }
+
+      const openModal = (src) => {
+        if (!src) return;
+        modalImage.src = src;
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      };
+
+      const closeModal = () => {
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        modalImage.src = "";
+        document.body.style.overflow = "";
+      };
+
+      triggers.forEach((node) => {
+        node.addEventListener("click", () => openModal(node.getAttribute("data-preview-src")));
+      });
+
+      closeBtn.addEventListener("click", closeModal);
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal.classList.contains("open")) {
+          closeModal();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
