@@ -7,6 +7,7 @@ from hs_lookup_app.certification import parse_certification_page
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "rctest_wooden_toys.html"
+BATTERY_FIXTURE = Path(__file__).parent / "fixtures" / "rctest_battery_toys.html"
 
 
 class CertificationParserTest(unittest.TestCase):
@@ -28,6 +29,18 @@ class CertificationParserTest(unittest.TestCase):
         self.assertGreaterEqual(len(result.document_groups_ru[0].items), 1)
         self.assertGreaterEqual(len(result.similar_products_ru), 5)
         self.assertGreaterEqual(len(result.faq_items_ru), 1)
+
+    def test_parse_battery_toys_page_extracts_all_document_groups(self) -> None:
+        raw = BATTERY_FIXTURE.read_bytes()
+        html = raw.decode("cp1251", errors="replace")
+        result = parse_certification_page(
+            html=html,
+            source_url="https://www.rctest.ru/sertifikaciya-produkcii/igrushki/igrushki-s-elementami-pitaniya/",
+            fetched_at="2026-05-08T00:00:00+00:00",
+        )
+
+        self.assertGreaterEqual(len(result.document_groups_ru or []), 4)
+        self.assertEqual(sum(len(group.items) for group in result.document_groups_ru or []), 7)
 
 
 if __name__ == "__main__":

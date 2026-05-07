@@ -27,13 +27,16 @@ def create_app(
 
     @app.get("/")
     def index():
+        tab = request.args.get("tab", "hs").strip().lower()
+        if tab not in {"hs", "name", "certification"}:
+            tab = "hs"
         return render_template(
             "index.html",
             error=None,
             code="",
             product_name="",
             cert_query="",
-            active_tab="hs",
+            active_tab=tab,
         )
 
     @app.post("/lookup")

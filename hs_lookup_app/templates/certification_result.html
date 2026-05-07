@@ -22,6 +22,8 @@
     a:hover { text-decoration: underline; }
     .wrap { max-width: 1180px; margin: 28px auto; padding: 0 20px 30px; }
     .card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 16px; }
+    .back-link { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 9px 14px; border-radius: 999px; background: var(--surface-soft); color: var(--text); font-size: 14px; }
+    .back-link:hover { text-decoration: none; background: #edf4fc; }
     .title { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
     .sub { margin: 0; color: var(--text-soft); }
     .meta-line { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; color: var(--text-soft); font-size: 14px; }
@@ -73,6 +75,7 @@
 <body>
   <div class="wrap">
     <div class="card">
+      <a class="back-link" href="/?tab=certification">← 返回查询</a>
       <div class="meta-pill">产品认证要求查询</div>
       <h1 class="title">{{ result.page_title_zh or result.matched_keyword_zh }}</h1>
       <p class="sub">{{ result.page_title_ru }}</p>

@@ -75,6 +75,8 @@ class CertificationPageRenderTest(unittest.TestCase):
         self.assertIn("https://www.rctest.ru/upload/sample.png", body)
         self.assertIn("查看完整图片", body)
         self.assertIn("image-preview-modal", body)
+        self.assertIn("/?tab=certification", body)
+        self.assertIn("返回查询", body)
 
     def test_index_contains_loading_overlay(self) -> None:
         app = create_app(certification_service=_FakeCertificationService())
@@ -120,6 +122,8 @@ class CertificationPageRenderTest(unittest.TestCase):
         self.assertIn("推荐结果", body)
         self.assertIn("игрушки из дерева", body)
         self.assertIn("9503 00 410 0", body)
+        self.assertIn("/?tab=name", body)
+        self.assertIn("返回查询", body)
 
 
 if __name__ == "__main__":

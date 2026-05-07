@@ -139,6 +139,13 @@ def _dedupe(items: list[str]) -> list[str]:
     return output
 
 
+def _resolve_content_container(section):
+    hidden_block = section.select_one("div.hidden-xs")
+    if hidden_block is not None:
+        return hidden_block
+    return section
+
+
 def parse_certification_page(html: str, source_url: str, fetched_at: str | None = None) -> ProductCertificationResult:
     soup = BeautifulSoup(html, "html.parser")
 
@@ -189,11 +196,11 @@ def parse_certification_page(html: str, source_url: str, fetched_at: str | None 
         if first_doc is not None:
             hero_image_url = _to_absolute_url(_extract_bg_image(first_doc.get("style") or ""), source_url)
 
-    hidden_block = section.select_one("div.hidden-xs")
-    stage_rows_ru = _collect_stage_rows(hidden_block)
-    faq_items_ru = _collect_faq(hidden_block)
-    document_groups_ru = _collect_document_groups(hidden_block, source_url=source_url)
-    similar_products_ru = _collect_similar_products(hidden_block, source_url=source_url)
+    content_container = _resolve_content_container(section)
+    stage_rows_ru = _collect_stage_rows(content_container)
+    faq_items_ru = _collect_faq(content_container)
+    document_groups_ru = _collect_document_groups(content_container, source_url=source_url)
+    similar_products_ru = _collect_similar_products(content_container, source_url=source_url)
 
     timestamp = fetched_at or datetime.now(timezone.utc).isoformat()
     return ProductCertificationResult(
