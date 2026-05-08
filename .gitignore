@@ -13,3 +13,4 @@ venv/
 *deploy_key*
 *deploy_key*.pub
 .superpowers/
+.playwright-mcp/

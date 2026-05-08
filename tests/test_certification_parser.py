@@ -8,6 +8,7 @@ from hs_lookup_app.certification import parse_certification_page
 
 FIXTURE = Path(__file__).parent / "fixtures" / "rctest_wooden_toys.html"
 BATTERY_FIXTURE = Path(__file__).parent / "fixtures" / "rctest_battery_toys.html"
+SOFT_FIXTURE = Path(__file__).parent / "fixtures" / "rctest_soft_toys.html"
 
 
 class CertificationParserTest(unittest.TestCase):
@@ -41,6 +42,19 @@ class CertificationParserTest(unittest.TestCase):
 
         self.assertGreaterEqual(len(result.document_groups_ru or []), 4)
         self.assertEqual(sum(len(group.items) for group in result.document_groups_ru or []), 7)
+
+    def test_parse_soft_toys_page_extracts_document_groups(self) -> None:
+        raw = SOFT_FIXTURE.read_bytes()
+        html = raw.decode("cp1251", errors="replace")
+        result = parse_certification_page(
+            html=html,
+            source_url="https://www.rctest.ru/sertifikaciya-produkcii/igrushki/myagkie-igrushki/",
+            fetched_at="2026-05-08T00:00:00+00:00",
+        )
+
+        self.assertGreaterEqual(len(result.document_groups_ru or []), 3)
+        self.assertEqual(sum(len(group.items) for group in result.document_groups_ru or []), 5)
+        self.assertGreaterEqual(len(result.certificate_names_ru), 5)
 
 
 if __name__ == "__main__":

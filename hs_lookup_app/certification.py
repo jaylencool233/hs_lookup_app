@@ -139,10 +139,30 @@ def _dedupe(items: list[str]) -> list[str]:
     return output
 
 
-def _resolve_content_container(section):
+def _resolve_faq_container(section):
     hidden_block = section.select_one("div.hidden-xs")
     if hidden_block is not None:
         return hidden_block
+    return section
+
+
+def _resolve_asset_container(section):
+    doc_markers = ("div.white-shell", "a.bx_catalog_item_container", ".more .portfolio-item")
+    for marker in doc_markers:
+        if section.select_one(marker) is not None:
+            return section
+
+    for ancestor in section.parents:
+        if not hasattr(ancestor, "select_one"):
+            continue
+        classes = ancestor.get("class") or []
+        if "main-content" in classes and any(ancestor.select_one(marker) is not None for marker in doc_markers):
+            return ancestor
+
+    for ancestor in section.parents:
+        if hasattr(ancestor, "select_one") and any(ancestor.select_one(marker) is not None for marker in doc_markers):
+            return ancestor
+
     return section
 
 
@@ -173,8 +193,11 @@ def parse_certification_page(html: str, source_url: str, fetched_at: str | None 
     if not summary_ru:
         raise ParseError("未找到认证摘要")
 
+    faq_container = _resolve_faq_container(section)
+    asset_container = _resolve_asset_container(section)
+
     certificate_names_ru: list[str] = []
-    for tag in section.select(".bx_catalog_item_title span, .bx_catalog_item_title"):
+    for tag in asset_container.select(".bx_catalog_item_title span, .bx_catalog_item_title"):
         text = _clean_text(tag.get_text(" ", strip=True))
         if text and text not in certificate_names_ru:
             certificate_names_ru.append(text)
@@ -196,11 +219,14 @@ def parse_certification_page(html: str, source_url: str, fetched_at: str | None 
         if first_doc is not None:
             hero_image_url = _to_absolute_url(_extract_bg_image(first_doc.get("style") or ""), source_url)
 
-    content_container = _resolve_content_container(section)
-    stage_rows_ru = _collect_stage_rows(content_container)
-    faq_items_ru = _collect_faq(content_container)
-    document_groups_ru = _collect_document_groups(content_container, source_url=source_url)
-    similar_products_ru = _collect_similar_products(content_container, source_url=source_url)
+    stage_rows_ru = _collect_stage_rows(faq_container)
+    faq_items_ru = _collect_faq(faq_container)
+    document_groups_ru = _collect_document_groups(asset_container, source_url=source_url)
+    similar_products_ru = _collect_similar_products(asset_container, source_url=source_url)
+    if not certificate_names_ru and document_groups_ru:
+        certificate_names_ru = _dedupe(
+            [item.title for group in document_groups_ru for item in group.items]
+        )
 
     timestamp = fetched_at or datetime.now(timezone.utc).isoformat()
     return ProductCertificationResult(
