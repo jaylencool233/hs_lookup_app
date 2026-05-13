@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import unittest
 
-from hs_lookup_app.models import CertificationDocumentGroup, CertificationDocumentItem, ProductCertificationResult
+from hs_lookup_app.models import (
+    CategoryItem,
+    CertificationDocumentGroup,
+    CertificationDocumentItem,
+    HsNameLookupResult,
+    LookupResult,
+    ProductCertificationResult,
+    SearchMatch,
+    TaxSection,
+    Taxes,
+)
 from hs_lookup_app.web import create_app
 
 
@@ -89,41 +99,79 @@ class CertificationPageRenderTest(unittest.TestCase):
         self.assertIn("loading-overlay", body)
         self.assertIn("查询中，请稍候", body)
         self.assertIn("data-loading-form", body)
-        self.assertIn("中文品名查HS", body)
+        self.assertIn("HS / 品名查询", body)
         self.assertIn("data-search-panel", body)
         self.assertIn("data-search-tab", body)
+        self.assertIn("candidate-modal", body)
 
-    def test_name_lookup_result_page_renders_recommended_candidate(self) -> None:
-        from hs_lookup_app.models import HsNameLookupResult, SearchMatch
-
+    def test_unified_lookup_renders_candidate_modal_for_multiple_matches(self) -> None:
         class _FakeHsService:
             def lookup(self, code: str):  # noqa: ARG002
-                raise AssertionError("should not call code lookup in this test")
+                raise AssertionError("should not call direct code lookup in this test")
 
-            def lookup_by_product_name(self, query: str) -> HsNameLookupResult:  # noqa: ARG002
+            def lookup_unified(self, query: str):  # noqa: ARG002
                 candidates = [
                     SearchMatch(code="9503004100", display_code="9503 00 410 0", name="Игрушки из дерева"),
                     SearchMatch(code="9503004900", display_code="9503 00 490 0", name="Прочие игрушки из дерева"),
                 ]
-                return HsNameLookupResult(
-                    query_zh="木制玩具",
-                    query_ru="игрушки из дерева",
-                    recommended=candidates[0],
-                    candidates=candidates,
-                )
+                return {
+                    "mode": "candidates",
+                    "query": "木制玩具",
+                    "result": HsNameLookupResult(
+                        query_zh="木制玩具",
+                        query_ru="игрушки из дерева",
+                        recommended=candidates[0],
+                        candidates=candidates,
+                    ),
+                }
 
         app = create_app(service=_FakeHsService(), certification_service=_FakeCertificationService())
         client = app.test_client()
 
-        response = client.post("/lookup-by-name", data={"product_name": "木制玩具"})
+        response = client.post("/lookup-unified", data={"query": "木制玩具"})
         body = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("推荐结果", body)
+        self.assertIn("候选编码", body)
         self.assertIn("игрушки из дерева", body)
         self.assertIn("9503 00 410 0", body)
-        self.assertIn("/?tab=name", body)
-        self.assertIn("返回查询", body)
+        self.assertIn("candidate-modal", body)
+        self.assertIn("/lookup?code=9503004100", body)
+
+    def test_unified_lookup_redirects_to_detail_for_single_match(self) -> None:
+        class _FakeHsService:
+            def lookup(self, code: str):  # noqa: ARG002
+                raise AssertionError("should not call direct code lookup in this test")
+
+            def lookup_unified(self, query: str):  # noqa: ARG002
+                return {
+                    "mode": "detail",
+                    "query": "9503004100",
+                    "result": LookupResult(
+                        hs_code="9503004100",
+                        display_code="9503 00 410 0",
+                        name_ru="Игрушки из дерева",
+                        name_zh="木制玩具",
+                        category_path_ru=[CategoryItem(code="95", name="Игрушки")],
+                        category_path_zh=[CategoryItem(code="95", name="玩具")],
+                        okpd_ru=None,
+                        okpd_zh=None,
+                        taxes=Taxes(import_=TaxSection(duty="10%", vat="20%"), export=TaxSection(duty="0%")),
+                        source_url="https://www.alta.ru/tnved/code/9503004100/",
+                        fetched_at="2026-05-13T00:00:00+00:00",
+                    ),
+                }
+
+        app = create_app(service=_FakeHsService(), certification_service=_FakeCertificationService())
+        client = app.test_client()
+
+        response = client.post("/lookup-unified", data={"query": "9503004100"})
+        body = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("HS编码查询结果", body)
+        self.assertIn("9503 00 410 0", body)
+        self.assertIn("木制玩具", body)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import unittest
 
-from hs_lookup_app.models import SearchMatch
+from hs_lookup_app.models import LookupResult, SearchMatch
 from hs_lookup_app.service import HsLookupService
 
 
@@ -46,6 +47,45 @@ class _FallbackAltaClient:
         return []
 
 
+@dataclass
+class _FakeDbCandidate:
+    code: str
+    display_code: str
+    name_ru: str
+    name_zh: str
+
+
+class _FakeRepository:
+    def __init__(self) -> None:
+        self.detail_result: LookupResult | None = None
+        self.candidates: list[_FakeDbCandidate] = []
+        self.saved_results: list[LookupResult] = []
+        self.detail_queries: list[str] = []
+        self.keyword_queries: list[str] = []
+
+    def find_detail_by_code(self, code: str) -> LookupResult | None:
+        self.detail_queries.append(code)
+        return self.detail_result
+
+    def search_candidates_by_keyword(self, keyword: str) -> list[_FakeDbCandidate]:
+        self.keyword_queries.append(keyword)
+        return self.candidates
+
+    def upsert_lookup_result(self, result: LookupResult) -> None:
+        self.saved_results.append(result)
+
+
+class _NeverCalledAltaClient:
+    def search_code(self, compact_code: str):
+        raise AssertionError(f"should not call search_code for {compact_code}")
+
+    def fetch_detail_html(self, compact_code: str):
+        raise AssertionError(f"should not call fetch_detail_html for {compact_code}")
+
+    def search_product_name(self, keyword_ru: str):
+        raise AssertionError(f"should not call search_product_name for {keyword_ru}")
+
+
 class HsNameLookupServiceTest(unittest.TestCase):
     def test_lookup_by_chinese_name_returns_ranked_candidates(self) -> None:
         service = HsLookupService(alta_client=_FakeAltaClient(), translator=_FakeTranslator())
@@ -75,6 +115,54 @@ class HsNameLookupServiceTest(unittest.TestCase):
         self.assertIn("ткань из полиэфирных штапельных волокон", client.queries)
         self.assertIn("полиэфир", client.queries)
         self.assertEqual(result.recommended.code, "5512199000")
+
+    def test_lookup_prefers_database_detail_without_calling_alta(self) -> None:
+        repo = _FakeRepository()
+        repo.detail_result = LookupResult(
+            hs_code="9503004100",
+            display_code="9503 00 410 0",
+            name_ru="Игрушки из дерева",
+            name_zh="木制玩具",
+            category_path_ru=[],
+            category_path_zh=[],
+            okpd_ru=None,
+            okpd_zh=None,
+            taxes=None,  # type: ignore[arg-type]
+            source_url="https://www.alta.ru/tnved/code/9503004100/",
+            fetched_at="2026-05-13T00:00:00+00:00",
+        )
+        service = HsLookupService(
+            alta_client=_NeverCalledAltaClient(),
+            translator=_FakeTranslator(),
+            repository=repo,
+        )
+
+        result = service.lookup("9503004100")
+
+        self.assertEqual(result.name_zh, "木制玩具")
+        self.assertEqual(repo.detail_queries, ["9503004100"])
+
+    def test_lookup_by_product_name_prefers_database_candidates(self) -> None:
+        repo = _FakeRepository()
+        repo.candidates = [
+            _FakeDbCandidate(
+                code="9503004100",
+                display_code="9503 00 410 0",
+                name_ru="Игрушки из дерева",
+                name_zh="木制玩具",
+            )
+        ]
+        service = HsLookupService(
+            alta_client=_NeverCalledAltaClient(),
+            translator=_FakeTranslator(),
+            repository=repo,
+        )
+
+        result = service.lookup_by_product_name("木制玩具")
+
+        self.assertEqual(result.recommended.code, "9503004100")
+        self.assertEqual(len(result.candidates), 1)
+        self.assertEqual(repo.keyword_queries, ["木制玩具"])
 
 
 if __name__ == "__main__":

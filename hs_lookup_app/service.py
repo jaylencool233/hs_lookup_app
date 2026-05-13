@@ -9,6 +9,7 @@ from hs_lookup_app.errors import NotFoundError, ValidationError
 from hs_lookup_app.models import CategoryItem, HsNameLookupResult, LookupResult, OkpdItem, SearchMatch
 from hs_lookup_app.normalizer import normalize_hs_code
 from hs_lookup_app.parser import AltaParser
+from hs_lookup_app.repository import TnvedRepository
 from hs_lookup_app.translator import Translator, build_translator
 
 
@@ -78,11 +79,13 @@ class HsLookupService:
         alta_client: AltaClient | None = None,
         parser: AltaParser | None = None,
         translator: Translator | None = None,
+        repository: TnvedRepository | None = None,
         cache_ttl_seconds: int = 3600,
     ) -> None:
         self.alta_client = alta_client or AltaClient()
         self.parser = parser or AltaParser()
         self.translator = translator or build_translator("mymemory")
+        self.repository = repository or TnvedRepository()
         self.cache_ttl_seconds = cache_ttl_seconds
         self._cache: dict[str, tuple[datetime, LookupResult]] = {}
 
@@ -151,6 +154,11 @@ class HsLookupService:
             if datetime.now() - cached_at < timedelta(seconds=self.cache_ttl_seconds):
                 return result
 
+        db_result = self.repository.find_detail_by_code(normalized.compact)
+        if db_result is not None:
+            self._cache[normalized.compact] = (datetime.now(), db_result)
+            return db_result
+
         search_match = self.alta_client.search_code(normalized.compact)
         if search_match is None:
             raise NotFoundError("未找到该 HS 编码的公开信息")
@@ -191,6 +199,7 @@ class HsLookupService:
                 ),
             ),
         )
+        self.repository.upsert_lookup_result(translated)
         self._cache[normalized.compact] = (datetime.now(), translated)
         return translated
 
@@ -198,6 +207,19 @@ class HsLookupService:
         query_zh = (product_name_zh or "").strip()
         if not query_zh:
             raise ValidationError("请输入中文品名")
+
+        db_candidates = self.repository.search_candidates_by_keyword(query_zh)
+        if db_candidates:
+            ranked_db = [
+                SearchMatch(code=item.code, display_code=item.display_code, name=item.name_ru or item.name_zh)
+                for item in db_candidates
+            ]
+            return HsNameLookupResult(
+                query_zh=query_zh,
+                query_ru="",
+                recommended=ranked_db[0],
+                candidates=ranked_db,
+            )
 
         query_ru = self.translator.translate_text(
             query_zh,
@@ -231,3 +253,29 @@ class HsLookupService:
             recommended=ranked[0],
             candidates=ranked,
         )
+
+    def lookup_unified(self, query: str) -> dict:
+        raw_query = (query or "").strip()
+        if not raw_query:
+            raise ValidationError("请输入10位HS编码或中文品名")
+
+        compact = re.sub(r"\s+", "", raw_query)
+        if compact.isdigit() and len(compact) == 10:
+            return {
+                "mode": "detail",
+                "query": raw_query,
+                "result": self.lookup(raw_query),
+            }
+
+        candidate_result = self.lookup_by_product_name(raw_query)
+        if len(candidate_result.candidates) == 1:
+            return {
+                "mode": "detail",
+                "query": raw_query,
+                "result": self.lookup(candidate_result.candidates[0].code),
+            }
+        return {
+            "mode": "candidates",
+            "query": raw_query,
+            "result": candidate_result,
+        }

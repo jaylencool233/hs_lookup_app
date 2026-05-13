@@ -27,16 +27,17 @@ def create_app(
 
     @app.get("/")
     def index():
-        tab = request.args.get("tab", "hs").strip().lower()
-        if tab not in {"hs", "name", "certification"}:
-            tab = "hs"
+        tab = request.args.get("tab", "lookup").strip().lower()
+        if tab not in {"lookup", "certification"}:
+            tab = "lookup"
         return render_template(
             "index.html",
             error=None,
-            code="",
-            product_name="",
+            query="",
             cert_query="",
             active_tab=tab,
+            candidate_result=None,
+            open_candidate_modal=False,
         )
 
     @app.post("/lookup")
@@ -44,15 +45,16 @@ def create_app(
         code = request.form.get("code", "")
         try:
             result = hs_service.lookup(code)
-            return render_template("result.html", result=result, error=None, active_tab="hs")
+            return render_template("result.html", result=result, error=None, active_tab="lookup")
         except Exception as exc:  # noqa: BLE001
             return render_template(
                 "index.html",
                 error=_error_message(exc),
-                code=code,
-                product_name="",
+                query=code,
                 cert_query="",
-                active_tab="hs",
+                active_tab="lookup",
+                candidate_result=None,
+                open_candidate_modal=False,
             ), 400
 
     @app.get("/lookup")
@@ -60,31 +62,43 @@ def create_app(
         code = request.args.get("code", "")
         try:
             result = hs_service.lookup(code)
-            return render_template("result.html", result=result, error=None, active_tab="hs")
+            return render_template("result.html", result=result, error=None, active_tab="lookup")
         except Exception as exc:  # noqa: BLE001
             return render_template(
                 "index.html",
                 error=_error_message(exc),
-                code=code,
-                product_name="",
+                query=code,
                 cert_query="",
-                active_tab="hs",
+                active_tab="lookup",
+                candidate_result=None,
+                open_candidate_modal=False,
             ), 400
 
-    @app.post("/lookup-by-name")
-    def lookup_by_name():
-        product_name = request.form.get("product_name", "")
+    @app.post("/lookup-unified")
+    def lookup_unified():
+        query = request.form.get("query", "")
         try:
-            result = hs_service.lookup_by_product_name(product_name)
-            return render_template("name_search_result.html", result=result, error=None, active_tab="name")
+            payload = hs_service.lookup_unified(query)
+            if payload["mode"] == "detail":
+                return render_template("result.html", result=payload["result"], error=None, active_tab="lookup")
+            return render_template(
+                "index.html",
+                error=None,
+                query=query,
+                cert_query="",
+                active_tab="lookup",
+                candidate_result=payload["result"],
+                open_candidate_modal=True,
+            )
         except Exception as exc:  # noqa: BLE001
             return render_template(
                 "index.html",
                 error=_error_message(exc),
-                code="",
-                product_name=product_name,
+                query=query,
                 cert_query="",
-                active_tab="name",
+                active_tab="lookup",
+                candidate_result=None,
+                open_candidate_modal=False,
             ), 400
 
     @app.post("/lookup-certification")
@@ -97,10 +111,11 @@ def create_app(
             return render_template(
                 "index.html",
                 error=_error_message(exc),
-                code="",
-                product_name="",
+                query="",
                 cert_query=query,
                 active_tab="certification",
+                candidate_result=None,
+                open_candidate_modal=False,
             ), 400
 
     @app.get("/api/hs-lookup")
@@ -141,12 +156,13 @@ def create_app(
                 mimetype="application/json",
             )
 
-    @app.get("/api/hs-name-lookup")
-    def api_hs_name_lookup():
-        product_name = request.args.get("product_name", "")
+    @app.get("/api/hs-search")
+    def api_hs_search():
+        query = request.args.get("query", "")
         try:
-            result = hs_service.lookup_by_product_name(product_name)
-            payload = {"success": True, "data": result.to_dict(), "message": ""}
+            result = hs_service.lookup_unified(query)
+            data = result["result"].to_dict() if hasattr(result["result"], "to_dict") else result["result"]
+            payload = {"success": True, "mode": result["mode"], "data": data, "message": ""}
             return Response(
                 json.dumps(payload, ensure_ascii=True),
                 mimetype="application/json",
